@@ -1,16 +1,9 @@
-# flutter_ui_music_player
+# Flutter UI Concept Music Player
+This app just experiment for created beautiful UI with Flutter.
 
-Flutter UI Concept Music Player
+### Design
+This app used reference from Dribbble website. You can check that from this [Design credit](https://dribbble.com/shots/6649063-)
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://flutter.dev/docs/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://flutter.dev/docs/cookbook)
-
-For help getting started with Flutter, view our
-[online documentation](https://flutter.dev/docs), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Result
+![Screenshot 1](https://raw.githubusercontent.com/CoderJava/Flutter-UI-Concept-Music-Player/master/screenshots/screenshot_2.png)
+![Sceenshot 2](https://raw.githubusercontent.com/CoderJava/Flutter-UI-Concept-Music-Player/master/screenshots/screenshot_3.png)
