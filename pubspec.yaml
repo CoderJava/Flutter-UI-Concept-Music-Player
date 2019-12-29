@@ -27,6 +27,9 @@ dependencies:
   # A highly customizable circular slider/progress bar for Flutter.
   sleek_circular_slider: ^1.0.7
 
+  # Flutter widgets that make it easy to implement the BLoC design pattern.
+  flutter_bloc: ^3.0.0
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

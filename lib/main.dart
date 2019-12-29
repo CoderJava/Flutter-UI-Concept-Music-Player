@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_ui_music_player/music_bloc.dart';
 import 'package:sleek_circular_slider/sleek_circular_slider.dart';
 
 void main() => runApp(App());
@@ -9,9 +11,12 @@ void main() => runApp(App());
 class App extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: MyApp(),
-      debugShowCheckedModeBanner: false,
+    return BlocProvider<MusicBloc>(
+      create: (context) => MusicBloc(),
+      child: MaterialApp(
+        home: MyApp(),
+        debugShowCheckedModeBanner: false,
+      ),
     );
   }
 }
@@ -106,7 +111,7 @@ class MyApp extends StatelessWidget {
                   Music music = listMusic[index];
                   int durationMinute = music.durationSecond >= 60 ? music.durationSecond ~/ 60 : 0;
                   int durationSecond = music.durationSecond >= 60 ? music.durationSecond % 60 : music.durationSecond;
-                  String strDuration = "$durationMinute:$durationSecond";
+                  String strDuration = "$durationMinute:" + (durationSecond < 10 ? "0$durationSecond" : "$durationSecond");
                   return GestureDetector(
                     onTap: () {
                       _showMiniPlayer(context, widthScreen, heightScreen, paddingBottom, music);
@@ -329,20 +334,20 @@ class WidgetMiniPlayer extends StatefulWidget {
 }
 
 class _WidgetMiniPlayerState extends State<WidgetMiniPlayer> {
-  Timer _timer;
-  double _progressMiniPlayer = 0.0;
+  MusicBloc _musicBloc;
+  Timer timer;
+  double _progressMusic = 0;
 
   @override
   void initState() {
-    if (_timer == null || !_timer.isActive) {
-      _timer = Timer.periodic(Duration(seconds: 1), (value) {
-        if (value.tick - 1 == widget.music.durationSecond) {
-          setState(() {
-            _timer.cancel();
-          });
-          return;
-        }
-        setState(() => _progressMiniPlayer = (value.tick / widget.music.durationSecond) * 100);
+    if (_musicBloc == null) {
+      _musicBloc = BlocProvider.of<MusicBloc>(context);
+    }
+    _musicBloc.add(MusicStart(widget.music));
+    if (timer == null || !timer.isActive) {
+      timer = Timer.periodic(Duration(seconds: 1), (value) {
+        print('progress music: ${value.tick}');
+        _musicBloc.add(MusicUpdate());
       });
     }
     super.initState();
@@ -350,7 +355,7 @@ class _WidgetMiniPlayerState extends State<WidgetMiniPlayer> {
 
   @override
   void dispose() {
-    _timer.cancel();
+    timer.cancel();
     super.dispose();
   }
 
@@ -361,89 +366,237 @@ class _WidgetMiniPlayerState extends State<WidgetMiniPlayer> {
         showModalBottomSheet(
           context: context,
           builder: (context) {
-            return Container();
+            return WidgetDetailMusicPlayer();
           },
           isScrollControlled: true,
           isDismissible: false,
         );
       },
-      child: Container(
-        width: widget.widthScreen,
-        padding: EdgeInsets.only(left: 16.0, top: 4.0, right: 16.0, bottom: widget.paddingBottom > 0 ? widget.paddingBottom : 16.0),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.only(topLeft: Radius.circular(24.0), topRight: Radius.circular(24.0)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: <Widget>[
-            Container(
-              width: 28.0,
-              height: 4.0,
-              decoration: BoxDecoration(
-                color: Colors.grey,
-                borderRadius: BorderRadius.all(Radius.circular(99)),
+      child: BlocProvider.value(
+        value: _musicBloc,
+        child: Container(
+          width: widget.widthScreen,
+          padding: EdgeInsets.only(left: 16.0, top: 4.0, right: 16.0, bottom: widget.paddingBottom > 0 ? widget.paddingBottom : 16.0),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(topLeft: Radius.circular(24.0), topRight: Radius.circular(24.0)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: <Widget>[
+              Container(
+                width: 28.0,
+                height: 4.0,
+                decoration: BoxDecoration(
+                  color: Colors.grey,
+                  borderRadius: BorderRadius.all(Radius.circular(99)),
+                ),
               ),
-            ),
-            SizedBox(height: 12.0),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: <Widget>[
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+              SizedBox(height: 12.0),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          'Now Playing',
+                          style: Theme.of(context).textTheme.subtitle.merge(TextStyle(color: Colors.grey)),
+                        ),
+                        Text('${widget.music.title}', style: Theme.of(context).textTheme.title),
+                      ],
+                    ),
+                  ),
+                  Stack(
                     children: <Widget>[
-                      Text(
-                        'Now Playing',
-                        style: Theme.of(context).textTheme.subtitle.merge(TextStyle(color: Colors.grey)),
+                      SizedBox(
+                        width: 32.0,
+                        height: 32.0,
+                        child: BlocBuilder<MusicBloc, MusicState>(builder: (context, state) {
+                          if (state is MusicUpdateProgress) {
+                            _progressMusic = state.progressMusic;
+                            int progressSecond = state.progressSecond;
+                            if (progressSecond == widget.music.durationSecond) {
+                              _progressMusic = 100;
+                              timer.cancel();
+                              _musicBloc.add(MusicEnd());
+                            }
+                          }
+                          return SleekCircularSlider(
+                            appearance: CircularSliderAppearance(
+                              customWidths: CustomSliderWidths(
+                                progressBarWidth: 2.0,
+                                trackWidth: 1.0,
+                                handlerSize: 1.0,
+                                shadowWidth: 1.0,
+                              ),
+                              infoProperties: InfoProperties(
+                                modifier: (value) => '',
+                              ),
+                              customColors: CustomSliderColors(
+                                trackColor: Colors.grey,
+                                progressBarColor: Colors.black,
+                              ),
+                              size: 4.0,
+                              angleRange: 360,
+                              startAngle: -90.0,
+                            ),
+                            min: 0.0,
+                            max: 100.0,
+                            initialValue: _progressMusic,
+                          );
+                        }),
                       ),
-                      Text('${widget.music.title}', style: Theme.of(context).textTheme.title),
+                      SizedBox(
+                        width: 32.0,
+                        height: 32.0,
+                        child: BlocBuilder<MusicBloc, MusicState>(builder: (context, state) {
+                          bool isPlaying = true;
+                          if (state is MusicEndProgress) {
+                            isPlaying = false;
+                          }
+                          return Icon(isPlaying ? Icons.pause : Icons.play_arrow, size: 20);
+                        }),
+                      ),
                     ],
                   ),
-                ),
-                Stack(
-                  children: <Widget>[
-                    SizedBox(
-                      width: 32.0,
-                      height: 32.0,
-                      child: SleekCircularSlider(
-                        appearance: CircularSliderAppearance(
-                          customWidths: CustomSliderWidths(
-                            progressBarWidth: 2.0,
-                            trackWidth: 1.0,
-                            handlerSize: 1.0,
-                            shadowWidth: 1.0,
-                          ),
-                          infoProperties: InfoProperties(
-                            modifier: (value) => '',
-                          ),
-                          customColors: CustomSliderColors(
-                            trackColor: Colors.grey,
-                            progressBarColor: Colors.black,
-                          ),
-                          size: 4.0,
-                          angleRange: 360,
-                          startAngle: -90.0,
-                        ),
-                        min: 0.0,
-                        max: 100.0,
-                        initialValue: _progressMiniPlayer,
-                      ),
-                    ),
-                    SizedBox(
-                      width: 32.0,
-                      height: 32.0,
-                      child: Icon(_timer.isActive ? Icons.pause : Icons.play_arrow, size: 20),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+}
+
+class WidgetDetailMusicPlayer extends StatelessWidget {
+
+  @override
+  Widget build(BuildContext context) {
+    MediaQueryData mediaQueryData = MediaQuery.of(context);
+    double widthScreen = mediaQueryData.size.width;
+    double heightScreen = mediaQueryData.size.height;
+    double paddingBottom = mediaQueryData.padding.bottom;
+
+    return Container(
+      width: widthScreen,
+      height: heightScreen,
+      child: Stack(
+        children: <Widget>[
+          _buildWidgetBackgroundCoverAlbum(widthScreen, heightScreen),
+          _buildWidgetContainerContent(widthScreen, heightScreen),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 16.0),
+            width: widthScreen,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: <Widget>[
+                WidgetProgressMusic(),
+                _buildWidgetPlayerController(),
+                SizedBox(height: paddingBottom > 0 ? paddingBottom : 16.0),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWidgetPlayerController() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: <Widget>[
+        Icon(Icons.skip_previous, color: Colors.white, size: 32.0),
+        SizedBox(width: 36.0),
+        Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: Colors.blueGrey[800],
+          ),
+          padding: EdgeInsets.all(16.0),
+          child: Icon(Icons.pause, color: Colors.white, size: 32.0),
+        ),
+        SizedBox(width: 36.0),
+        Icon(Icons.skip_next, color: Colors.white, size: 32.0),
+      ],
+    );
+  }
+
+  Widget _buildWidgetContainerContent(double widthScreen, double heightScreen) {
+    return Align(
+      alignment: Alignment.bottomCenter,
+      child: Container(
+        width: widthScreen,
+        height: heightScreen / 1.4,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.only(topLeft: Radius.circular(48.0), topRight: Radius.circular(48.0)),
+          gradient: LinearGradient(
+            begin: Alignment.bottomRight,
+            end: Alignment.topLeft,
+            colors: [
+              Colors.blueGrey[300],
+              Colors.white,
+            ],
+            stops: [0.1, 0.9],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWidgetBackgroundCoverAlbum(double widthScreen, double heightScreen) {
+    return Container(
+      width: widthScreen,
+      height: heightScreen / 2,
+      decoration: BoxDecoration(
+        image: DecorationImage(
+          image: AssetImage('assets/images/img_cover_album_red_taylor_swift.jpeg'),
+          fit: BoxFit.cover,
+        ),
+      ),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(
+          sigmaX: 5.0,
+          sigmaY: 5.0,
+        ),
+        child: Container(
+          color: Colors.white.withOpacity(0.0),
+        ),
+      ),
+    );
+  }
+}
+
+// ignore: must_be_immutable
+class WidgetProgressMusic extends StatelessWidget {
+  double _progress = 0;
+  int _durationProgress = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocBuilder<MusicBloc, MusicState>(builder: (context, state) {
+      if (state is MusicUpdateProgress) {
+        _progress = state.progressMusic / 100;
+        _durationProgress = state.progressSecond;
+      }
+      int minute = _durationProgress ~/ 60;
+      int second = minute > 0 ? _durationProgress % 60 : _durationProgress;
+      String strDuration = (minute < 10 ? '0$minute' : '$minute') + ':' + (second < 10 ? '0$second' : '$second');
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        children: <Widget>[
+          LinearProgressIndicator(
+            value: _progress,
+            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            backgroundColor: Colors.blueGrey[800],
+          ),
+          Text(strDuration),
+        ],
+      );
+    });
   }
 }
 
