@@ -104,62 +104,9 @@ class MyApp extends StatelessWidget {
               ],
             ),
             SizedBox(height: 8.0),
-            Expanded(
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                itemBuilder: (context, index) {
-                  Music music = listMusic[index];
-                  int durationMinute = music.durationSecond >= 60 ? music.durationSecond ~/ 60 : 0;
-                  int durationSecond = music.durationSecond >= 60 ? music.durationSecond % 60 : music.durationSecond;
-                  String strDuration = "$durationMinute:" + (durationSecond < 10 ? "0$durationSecond" : "$durationSecond");
-                  return GestureDetector(
-                    onTap: () {
-                      _showMiniPlayer(context, widthScreen, heightScreen, paddingBottom, music);
-                    },
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8.0),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: <Widget>[
-                          Expanded(
-                            child: Column(
-                              mainAxisSize: MainAxisSize.min,
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: <Widget>[
-                                Text(
-                                  music.title,
-                                  style: TextStyle(fontWeight: FontWeight.w500),
-                                ),
-                                Text(
-                                  '${music.artist} • $strDuration',
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          ),
-                          Icon(Icons.more_vert),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-                itemCount: listMusic.length,
-              ),
-            ),
+            WidgetPlaylistMusic(listMusic, widthScreen, heightScreen, paddingBottom),
           ],
         ),
-      ),
-    );
-  }
-
-  void _showMiniPlayer(BuildContext context, double widthScreen, double heightScreen, double paddingBottom, Music music) {
-    showBottomSheet(
-      context: context,
-      builder: (context) {
-        return WidgetMiniPlayer(music, widthScreen, heightScreen, paddingBottom);
-      },
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(topLeft: Radius.circular(24.0), topRight: Radius.circular(24.0)),
       ),
     );
   }
@@ -272,6 +219,86 @@ class MyApp extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class WidgetPlaylistMusic extends StatefulWidget {
+  final List<Music> listMusic;
+  final double widthScreen;
+  final double heightScreen;
+  final double paddingBottom;
+
+  WidgetPlaylistMusic(this.listMusic, this.widthScreen, this.heightScreen, this.paddingBottom);
+
+  @override
+  _WidgetPlaylistMusicState createState() => _WidgetPlaylistMusicState();
+}
+
+class _WidgetPlaylistMusicState extends State<WidgetPlaylistMusic> {
+  int _indexMusicSelected = -1;
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: ListView.builder(
+        padding: EdgeInsets.zero,
+        itemBuilder: (context, index) {
+          Music music = widget.listMusic[index];
+          int durationMinute = music.durationSecond >= 60 ? music.durationSecond ~/ 60 : 0;
+          int durationSecond = music.durationSecond >= 60 ? music.durationSecond % 60 : music.durationSecond;
+          String strDuration = "$durationMinute:" + (durationSecond < 10 ? "0$durationSecond" : "$durationSecond");
+          return GestureDetector(
+            onTap: () {
+              _showMiniPlayer(context, widget.widthScreen, widget.heightScreen, widget.paddingBottom, music);
+              setState(() {
+                _indexMusicSelected = index;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8.0),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: <Widget>[
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: <Widget>[
+                        Text(
+                          music.title,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Color(_indexMusicSelected == index ? 0xFFAE1947 : 0xFF000000),
+                          ),
+                        ),
+                        Text(
+                          '${music.artist} • $strDuration',
+                          style: TextStyle(color: Colors.grey),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.more_vert),
+                ],
+              ),
+            ),
+          );
+        },
+        itemCount: widget.listMusic.length,
+      ),
+    );
+  }
+
+  void _showMiniPlayer(BuildContext context, double widthScreen, double heightScreen, double paddingBottom, Music music) {
+    showBottomSheet(
+      context: context,
+      builder: (context) {
+        return WidgetMiniPlayer(music, widthScreen, heightScreen, paddingBottom);
+      },
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(topLeft: Radius.circular(24.0), topRight: Radius.circular(24.0)),
       ),
     );
   }
