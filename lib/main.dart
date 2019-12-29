@@ -473,7 +473,6 @@ class _WidgetMiniPlayerState extends State<WidgetMiniPlayer> {
 }
 
 class WidgetDetailMusicPlayer extends StatelessWidget {
-
   @override
   Widget build(BuildContext context) {
     MediaQueryData mediaQueryData = MediaQuery.of(context);
@@ -494,8 +493,38 @@ class WidgetDetailMusicPlayer extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.end,
               children: <Widget>[
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      SizedBox(height: 128.0 + 16.0),
+                      Container(
+                        width: 72.0,
+                        padding: EdgeInsets.symmetric(vertical: 4.0),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.5),
+                          borderRadius: BorderRadius.all(Radius.circular(16.0)),
+                        ),
+                        child: Icon(Icons.keyboard_arrow_down, color: Colors.white),
+                      ),
+                      SizedBox(height: 24.0),
+                      ClipRRect(
+                        child: Image.asset(
+                          'assets/images/img_cover_album_red_taylor_swift.jpeg',
+                          width: widthScreen / 1.5,
+                        ),
+                        borderRadius: BorderRadius.all(Radius.circular(48.0)),
+                      ),
+                    ],
+                  ),
+                ),
+                WidgetDetailTitleMusic(),
+                SizedBox(height: 16.0),
                 WidgetProgressMusic(),
+                SizedBox(height: 16.0),
                 _buildWidgetPlayerController(),
+                SizedBox(height: 16.0),
                 SizedBox(height: paddingBottom > 0 ? paddingBottom : 16.0),
               ],
             ),
@@ -517,7 +546,15 @@ class WidgetDetailMusicPlayer extends StatelessWidget {
             color: Colors.blueGrey[800],
           ),
           padding: EdgeInsets.all(16.0),
-          child: Icon(Icons.pause, color: Colors.white, size: 32.0),
+          child: BlocBuilder<MusicBloc, MusicState>(
+            builder: (context, state) {
+              bool isPlaying = true;
+              if (state is MusicEndProgress) {
+                isPlaying = false;
+              }
+              return Icon(isPlaying ? Icons.pause : Icons.play_arrow, color: Colors.white, size: 32.0);
+            },
+          ),
         ),
         SizedBox(width: 36.0),
         Icon(Icons.skip_next, color: Colors.white, size: 32.0),
@@ -597,6 +634,44 @@ class WidgetProgressMusic extends StatelessWidget {
         ],
       );
     });
+  }
+}
+
+class WidgetDetailTitleMusic extends StatefulWidget {
+  @override
+  _WidgetDetailTitleMusicState createState() => _WidgetDetailTitleMusicState();
+}
+
+class _WidgetDetailTitleMusicState extends State<WidgetDetailTitleMusic> {
+  bool _isRepeatOne = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: <Widget>[
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Text(BlocProvider.of<MusicBloc>(context).music.title, style: Theme.of(context).textTheme.title),
+              Text(BlocProvider.of<MusicBloc>(context).music.artist,
+                  style: Theme.of(context).textTheme.subtitle.merge(TextStyle(color: Colors.blueGrey))),
+            ],
+          ),
+        ),
+        GestureDetector(
+          onTap: () {
+            setState(() => _isRepeatOne = !_isRepeatOne);
+          },
+          child: Icon(
+            Icons.repeat_one,
+            color: _isRepeatOne ? Color(0xFFAE1947) : Color(0xFF000000),
+          ),
+        ),
+      ],
+    );
   }
 }
 
